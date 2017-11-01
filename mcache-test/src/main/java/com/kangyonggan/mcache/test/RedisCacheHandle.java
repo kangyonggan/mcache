@@ -1,5 +1,6 @@
 package com.kangyonggan.mcache.test;
 
+import com.kangyonggan.mcache.core.MethodCache;
 import com.kangyonggan.mcache.core.MethodCacheHandle;
 
 import java.util.HashMap;
@@ -14,7 +15,7 @@ public class RedisCacheHandle implements MethodCacheHandle {
     private static Map<String, Object> caches = new HashMap();
 
     @Override
-    public void set(String key, Object value) {
+    public void set(String key, Object value, Long expire, MethodCache.Unit unit) {
         System.out.println("redis:save cache: key:" + key + ", value:" + value);
         caches.put(key, value);
     }

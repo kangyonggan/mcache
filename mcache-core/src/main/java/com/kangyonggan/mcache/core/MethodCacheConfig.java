@@ -6,7 +6,7 @@ package com.kangyonggan.mcache.core;
  */
 public class MethodCacheConfig {
 
-    private static String prefix;
+    private static String prefix = "";
 
     private static long expire = -1L;
 

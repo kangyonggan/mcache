@@ -20,7 +20,7 @@ public @interface MethodCache {
      *
      * @return
      */
-    String value() default "";
+    String value();
 
     /**
      * @return

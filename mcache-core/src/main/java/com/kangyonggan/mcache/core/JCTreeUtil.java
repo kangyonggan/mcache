@@ -50,7 +50,7 @@ public class JCTreeUtil {
         tree.accept(new TreeTranslator() {
             @Override
             public void visitClassDef(JCTree.JCClassDecl jcClassDecl) {
-                String varName = className.substring(0, 1).toLowerCase() + className.substring(1);
+                String varName = "_" + className.substring(0, 1).toLowerCase() + className.substring(1);
                 boolean hasVariable = hasVariable(translate(jcClassDecl.defs), className, varName);
 
                 ListBuffer<JCTree> statements = new ListBuffer();
@@ -104,6 +104,7 @@ public class JCTreeUtil {
         tree.accept(new TreeTranslator() {
             @Override
             public void visitBlock(JCTree.JCBlock tree) {
+                super.visitBlock(tree);
                 for (int i = 0; i < tree.getStatements().size(); i++) {
                     JCTree.JCStatement jcStatement = tree.getStatements().get(i);
 
@@ -165,6 +166,20 @@ public class JCTreeUtil {
         }
 
         return params;
+    }
+
+    public static JCTree.JCExpression buildGetter(String key) {
+        String arr[] = key.split("\\.");
+
+        JCTree.JCExpression expression = env.getTreeMaker().Ident(env.getNames().fromString(arr[0]));
+        for (int i = 1; i < arr.length; i++) {
+            String methodName = "get" + arr[i].substring(0, 1).toUpperCase() + arr[i].substring(1);
+            JCTree.JCFieldAccess fieldAccess = env.getTreeMaker().Select(expression, env.getNames().fromString(methodName));
+            JCTree.JCMethodInvocation methodInvocation = env.getTreeMaker().Apply(List.nil(), fieldAccess, List.nil());
+            expression = methodInvocation;
+        }
+
+        return expression;
     }
 
 }
