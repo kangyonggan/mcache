@@ -61,7 +61,13 @@ public class JCTreeUtil {
                 if (!hasVariable) {
                     JCTree.JCExpression typeExpr = env.getTreeMaker().Ident(env.getNames().fromString(className));
                     JCTree.JCNewClass newClassExpr = env.getTreeMaker().NewClass(null, List.nil(), typeExpr, getArgs(args).toList(), null);
-                    JCTree.JCVariableDecl variableDecl = env.getTreeMaker().VarDef(env.getTreeMaker().Modifiers(Flags.PRIVATE), env.getNames().fromString(varName), typeExpr, newClassExpr);
+
+                    int modifiers = Flags.PRIVATE;
+                    if (jcClassDecl.sym.flatname.toString().equals(jcClassDecl.sym.fullname.toString())) {
+                        modifiers = modifiers | Flags.STATIC;
+                    }
+                    JCTree.JCVariableDecl variableDecl = env.getTreeMaker().VarDef(env.getTreeMaker().Modifiers(modifiers), env.getNames().fromString(varName), typeExpr, newClassExpr);
+
                     statements.append(variableDecl);
 
                     jcClassDecl.defs = statements.toList();
@@ -92,8 +98,22 @@ public class JCTreeUtil {
      * @return
      */
     public static boolean hasReturnValue(Element element) {
-        // TODO
-        return true;
+        final boolean[] hasReturnValue = {false};
+
+        JCTree tree = (JCTree) env.getTrees().getTree(element);
+        tree.accept(new TreeTranslator() {
+            @Override
+            public void visitBlock(JCTree.JCBlock tree) {
+                for (int i = 0; i < tree.getStatements().size(); i++) {
+                    JCTree.JCStatement jcStatement = tree.getStatements().get(i);
+
+                    if (jcStatement instanceof JCTree.JCReturn) {
+                        hasReturnValue[0] = true;
+                    }
+                }
+            }
+        });
+        return hasReturnValue[0];
     }
 
     /**
