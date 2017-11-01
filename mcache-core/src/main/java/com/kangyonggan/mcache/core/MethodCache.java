@@ -55,22 +55,38 @@ public @interface MethodCache {
         /**
          * second
          */
-        SECOND,
+        SECOND("SECOND", 1L),
 
         /**
          * minute
          */
-        MINUTE,
+        MINUTE("MINUTE", 60L),
 
         /**
          * hour
          */
-        HOUR,
+        HOUR("HOUR", 3600L),
 
         /**
          * day
          */
-        DAY
+        DAY("DAY", 216000L);
+
+        private String name;
+        private Long weight;
+
+        Unit(String name, Long weight) {
+            this.name = name;
+            this.weight = weight;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public Long getWeight() {
+            return weight;
+        }
     }
 
 }

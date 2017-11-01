@@ -12,21 +12,28 @@ public class MethodCacheConfig {
 
     private static MethodCache.Unit unit = MethodCache.Unit.SECOND;
 
-    private static Class<? extends MethodCacheHandle> methodCacheHandle = MemoryCacheHandle.class;
-
     public static String getPrefix() {
         return prefix;
+    }
+
+    public static void setPrefix(String prefix) {
+        MethodCacheConfig.prefix = prefix;
     }
 
     public static long getExpire() {
         return expire;
     }
 
+    public static void setExpire(long expire) {
+        MethodCacheConfig.expire = expire;
+    }
+
     public static MethodCache.Unit getUnit() {
         return unit;
     }
 
-    public static Class<? extends MethodCacheHandle> getMethodCacheHandle() {
-        return methodCacheHandle;
+    public static void setUnit(MethodCache.Unit unit) {
+        MethodCacheConfig.unit = unit;
     }
+
 }

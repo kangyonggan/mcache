@@ -43,8 +43,8 @@ public class MethodCacheProcessor extends AbstractProcessor {
                     return true;
                 }
 
-                String handlePackage = (String) getAnnotationParameter(element, "handle");
-                handlePackage = handlePackage == null ? MethodCacheConfig.getMethodCacheHandle().getName() : handlePackage;
+                String handlePackage = getAnnotationParameter(element, "handle");
+                handlePackage = handlePackage == null ? MemoryCacheHandle.class.getName() : handlePackage;
                 JCTreeUtil.importPackage(element, handlePackage);
 
                 String className = handlePackage.substring(handlePackage.lastIndexOf(".") + 1);
@@ -61,7 +61,7 @@ public class MethodCacheProcessor extends AbstractProcessor {
      * @param name
      * @return
      */
-    private Object getAnnotationParameter(Element element, String name) {
+    private String getAnnotationParameter(Element element, String name) {
         AnnotationMirror annotationMirror = JCTreeUtil.getAnnotationMirror(element, MethodCache.class.getName());
 
         for (ExecutableElement ee : annotationMirror.getElementValues().keySet()) {
@@ -103,10 +103,15 @@ public class MethodCacheProcessor extends AbstractProcessor {
                 JCTree.JCExpression typeExpr = environment.getTreeMaker().Ident(environment.getNames().fromString("Object"));
                 JCTree.JCFieldAccess fieldAccess = environment.getTreeMaker().Select(varIdent, environment.getNames().fromString("get"));
 
-                String key = (String) getAnnotationParameter(element, "value");
+                String prefix = getAnnotationParameter(element, "prefix");
+                String key = getAnnotationParameter(element, "value");
                 Name cacheValueName = environment.getNames().fromString(CACHE_VALUE);
                 JCTree.JCExpression keyExpression = getKeyExpression(key);
-                JCTree.JCMethodInvocation methodInvocation = environment.getTreeMaker().Apply(List.nil(), fieldAccess, List.of(keyExpression));
+                JCTree.JCExpression prefixExpr = environment.getTreeMaker().Literal(TypeTag.BOT, null);
+                if (prefix != null) {
+                    prefixExpr = environment.getTreeMaker().Ident(environment.getNames().fromString(prefix));
+                }
+                JCTree.JCMethodInvocation methodInvocation = environment.getTreeMaker().Apply(List.nil(), fieldAccess, List.of(prefixExpr, keyExpression));
                 JCTree.JCVariableDecl variableDecl = environment.getTreeMaker().VarDef(environment.getTreeMaker().Modifiers(0), cacheValueName, typeExpr, methodInvocation);
                 statements.append(variableDecl);
 
@@ -135,17 +140,23 @@ public class MethodCacheProcessor extends AbstractProcessor {
                          * create code：_memoryCacheHandle.set("key", _returnValue, expire, unit);
                          */
                         fieldAccess = environment.getTreeMaker().Select(varIdent, environment.getNames().fromString("set"));
-                        Long expire = (Long) getAnnotationParameter(element, "expire");
-                        if (expire == null) {
-                            expire = MethodCacheConfig.getExpire();
-                        }
-                        MethodCache.Unit unit = (MethodCache.Unit) getAnnotationParameter(element, "unit");
-                        if (unit == null) {
-                            unit = MethodCacheConfig.getUnit();
-                        }
+                        String strExpire = getAnnotationParameter(element, "expire");
 
-                        JCTree.JCFieldAccess fa = environment.getTreeMaker().Select(environment.getTreeMaker().Select(environment.getTreeMaker().Ident(environment.getNames().fromString("MethodCache")), environment.getNames().fromString("Unit")), environment.getNames().fromString(unit.name()));
-                        methodInvocation = environment.getTreeMaker().Apply(List.nil(), fieldAccess, List.of(keyExpression, environment.getTreeMaker().Ident(environment.getNames().fromString(RETURN_VALUE)), environment.getTreeMaker().Literal(expire), fa));
+                        JCTree.JCLiteral literal;
+                        if (strExpire != null) {
+                            literal = environment.getTreeMaker().Literal(Long.parseLong(strExpire));
+                        } else {
+                            literal = environment.getTreeMaker().Literal(TypeTag.BOT, null);
+                        }
+                        String unit = getAnnotationParameter(element, "unit");
+
+                        JCTree.JCFieldAccess fa;
+                        if (unit != null) {
+                            fa = environment.getTreeMaker().Select(environment.getTreeMaker().Select(environment.getTreeMaker().Ident(environment.getNames().fromString("MethodCache")), environment.getNames().fromString("Unit")), environment.getNames().fromString(unit));
+                            methodInvocation = environment.getTreeMaker().Apply(List.nil(), fieldAccess, List.of(prefixExpr, keyExpression, environment.getTreeMaker().Ident(environment.getNames().fromString(RETURN_VALUE)), literal, fa));
+                        } else {
+                            methodInvocation = environment.getTreeMaker().Apply(List.nil(), fieldAccess, List.of(prefixExpr, keyExpression, environment.getTreeMaker().Ident(environment.getNames().fromString(RETURN_VALUE)), literal, environment.getTreeMaker().Literal(TypeTag.BOT, null)));
+                        }
                         JCTree.JCExpressionStatement code = environment.getTreeMaker().Exec(methodInvocation);
                         statements.append(code);
 
