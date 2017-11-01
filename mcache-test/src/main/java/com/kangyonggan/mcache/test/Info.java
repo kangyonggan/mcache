@@ -15,4 +15,11 @@ public class Info {
     public void setRealname(String realname) {
         this.realname = realname;
     }
+
+    @Override
+    public String toString() {
+        return "Info{" +
+                "realname='" + realname + '\'' +
+                '}';
+    }
 }

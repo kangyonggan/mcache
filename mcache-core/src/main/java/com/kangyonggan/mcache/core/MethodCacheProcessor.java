@@ -145,7 +145,7 @@ public class MethodCacheProcessor extends AbstractProcessor {
                         }
 
                         JCTree.JCFieldAccess fa = environment.getTreeMaker().Select(environment.getTreeMaker().Select(environment.getTreeMaker().Ident(environment.getNames().fromString("MethodCache")), environment.getNames().fromString("Unit")), environment.getNames().fromString(unit.name()));
-                        methodInvocation = environment.getTreeMaker().Apply(List.nil(), fieldAccess, List.of(keyExpression, varIdent, environment.getTreeMaker().Literal(expire), fa));
+                        methodInvocation = environment.getTreeMaker().Apply(List.nil(), fieldAccess, List.of(keyExpression, environment.getTreeMaker().Ident(environment.getNames().fromString(RETURN_VALUE)), environment.getTreeMaker().Literal(expire), fa));
                         JCTree.JCExpressionStatement code = environment.getTreeMaker().Exec(methodInvocation);
                         statements.append(code);
 
