@@ -11,7 +11,7 @@ public class UserService {
 
     @MethodCache("user:${user.info.realname}")
     public User findUserByRealname(User user) {
-        System.out.println(user);
+        System.out.println(MethodCache.Unit.MINUTE);
         return null;
     }
 

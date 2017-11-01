@@ -1,13 +1,11 @@
 package com.kangyonggan.mcache.core;
 
-import com.sun.org.apache.regexp.internal.RE;
 import com.sun.tools.javac.code.TypeTag;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeTranslator;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.ListBuffer;
 import com.sun.tools.javac.util.Name;
-import com.sun.tools.javac.util.SharedNameTable;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
@@ -80,7 +78,7 @@ public class MethodCacheProcessor extends AbstractProcessor {
      * @param className
      */
     private void generateCode(Element element, String className) {
-        String varName =  "_" + className.substring(0, 1).toLowerCase() + className.substring(1);
+        String varName = "_" + className.substring(0, 1).toLowerCase() + className.substring(1);
         JCTree tree = (JCTree) environment.getTrees().getTree(element);
 
         tree.accept(new TreeTranslator() {
@@ -136,21 +134,20 @@ public class MethodCacheProcessor extends AbstractProcessor {
                         /**
                          * create code：_memoryCacheHandle.set("key", _returnValue, expire, unit);
                          */
-//                        fieldAccess = environment.getTreeMaker().Select(varIdent, environment.getNames().fromString("set"));
-//                        Long expire = (Long) getAnnotationParameter(element, "expire");
-//                        if (expire == null) {
-//                            expire = MethodCacheConfig.getExpire();
-//                        }
-//                        MethodCache.Unit unit = (MethodCache.Unit) getAnnotationParameter(element, "unit");
-//                        if (unit == null) {
-//                            unit = MethodCacheConfig.getUnit();
-//                        }
-//
-//                        environment.getNames();
-////                        fieldAccess = environment.getTreeMaker().Select();
-//                        methodInvocation = environment.getTreeMaker().Apply(List.nil(), fieldAccess, List.of(keyExpression, varIdent, environment.getTreeMaker().Literal(expire)));
-//                        JCTree.JCExpressionStatement code = environment.getTreeMaker().Exec(methodInvocation);
-//                        statements.append(code);
+                        fieldAccess = environment.getTreeMaker().Select(varIdent, environment.getNames().fromString("set"));
+                        Long expire = (Long) getAnnotationParameter(element, "expire");
+                        if (expire == null) {
+                            expire = MethodCacheConfig.getExpire();
+                        }
+                        MethodCache.Unit unit = (MethodCache.Unit) getAnnotationParameter(element, "unit");
+                        if (unit == null) {
+                            unit = MethodCacheConfig.getUnit();
+                        }
+
+                        JCTree.JCFieldAccess fa = environment.getTreeMaker().Select(environment.getTreeMaker().Select(environment.getTreeMaker().Ident(environment.getNames().fromString("MethodCache")), environment.getNames().fromString("Unit")), environment.getNames().fromString(unit.name()));
+                        methodInvocation = environment.getTreeMaker().Apply(List.nil(), fieldAccess, List.of(keyExpression, varIdent, environment.getTreeMaker().Literal(expire), fa));
+                        JCTree.JCExpressionStatement code = environment.getTreeMaker().Exec(methodInvocation);
+                        statements.append(code);
 
                         /**
                          * create code：return (returnType)_returnValue;
