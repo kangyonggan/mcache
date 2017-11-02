@@ -12,7 +12,11 @@ public class UserService {
     @MethodCache(value = "user:${user.info.realname}")
     public static User findUserByRealname(User user) {
         System.out.println("没走缓存：" + user);
-        return user;
+        if (user != null) {
+            return user;
+        }
+
+        return new User();
     }
 
     public static void main(String[] args) throws Exception {

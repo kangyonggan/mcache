@@ -2,6 +2,7 @@ package com.kangyonggan.mcache.core;
 
 import com.sun.source.tree.Tree;
 import com.sun.tools.javac.code.Flags;
+import com.sun.tools.javac.code.TypeTag;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeTranslator;
 import com.sun.tools.javac.util.List;
@@ -9,16 +10,24 @@ import com.sun.tools.javac.util.ListBuffer;
 
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
 
 /**
+ * JCTree Util
+ *
  * @author kangyonggan
  * @since 10/31/17
  */
 public class JCTreeUtil {
 
+    /**
+     * JCTree environment
+     */
     private static MethodCacheEnvironment env = MethodCacheEnvironment.getInstance();
 
     /**
+     * import a package
+     *
      * @param element
      * @param packageName
      */
@@ -41,16 +50,18 @@ public class JCTreeUtil {
     }
 
     /**
+     * define a variable, e.g. private User _user = new User(1001, "zhangsan");
+     *
      * @param element
      * @param className
      * @param args
      */
-    public static void defineVariable(Element element, String className, Object... args) {
+    public static void defineVariable(Element element, String className, List<JCTree.JCExpression> args) {
         JCTree tree = (JCTree) env.getTrees().getTree(element.getEnclosingElement());
         tree.accept(new TreeTranslator() {
             @Override
             public void visitClassDef(JCTree.JCClassDecl jcClassDecl) {
-                String varName = "_" + className.substring(0, 1).toLowerCase() + className.substring(1);
+                String varName = MethodCacheConstants.VARIABLE_PREFIX + className.substring(0, 1).toLowerCase() + className.substring(1);
                 boolean hasVariable = hasVariable(translate(jcClassDecl.defs), className, varName);
 
                 ListBuffer<JCTree> statements = new ListBuffer();
@@ -60,9 +71,10 @@ public class JCTreeUtil {
 
                 if (!hasVariable) {
                     JCTree.JCExpression typeExpr = env.getTreeMaker().Ident(env.getNames().fromString(className));
-                    JCTree.JCNewClass newClassExpr = env.getTreeMaker().NewClass(null, List.nil(), typeExpr, getArgs(args).toList(), null);
+                    JCTree.JCNewClass newClassExpr = env.getTreeMaker().NewClass(null, List.nil(), typeExpr, args, null);
 
                     int modifiers = Flags.PRIVATE;
+                    // not inner class, variable is static
                     if (jcClassDecl.sym.flatname.toString().equals(jcClassDecl.sym.fullname.toString())) {
                         modifiers = modifiers | Flags.STATIC;
                     }
@@ -79,6 +91,8 @@ public class JCTreeUtil {
     }
 
     /**
+     * get annotation mirror
+     *
      * @param element
      * @param name
      * @return
@@ -94,30 +108,29 @@ public class JCTreeUtil {
     }
 
     /**
+     * get the method's return type
+     *
      * @param element
      * @return
      */
-    public static boolean hasReturnValue(Element element) {
-        final boolean[] hasReturnValue = {false};
+    public static JCTree.JCExpression getReturnType(Element element) {
+        final JCTree.JCExpression[] returnType = new JCTree.JCExpression[1];
 
         JCTree tree = (JCTree) env.getTrees().getTree(element);
         tree.accept(new TreeTranslator() {
             @Override
-            public void visitBlock(JCTree.JCBlock tree) {
-                super.visitBlock(tree);
-                for (int i = 0; i < tree.getStatements().size(); i++) {
-                    JCTree.JCStatement jcStatement = tree.getStatements().get(i);
-
-                    if (jcStatement instanceof JCTree.JCReturn) {
-                        hasReturnValue[0] = true;
-                    }
-                }
+            public void visitMethodDef(JCTree.JCMethodDecl jcMethodDecl) {
+                returnType[0] = jcMethodDecl.restype;
+                super.visitMethodDef(jcMethodDecl);
             }
         });
-        return hasReturnValue[0];
+
+        return returnType[0];
     }
 
     /**
+     * get method's arguments
+     *
      * @param args
      * @return
      */
@@ -133,6 +146,8 @@ public class JCTreeUtil {
     }
 
     /**
+     * adjust class already has variable
+     *
      * @param oldList
      * @param className
      * @param varName
@@ -156,6 +171,8 @@ public class JCTreeUtil {
     }
 
     /**
+     * get the method's parameters
+     *
      * @param jcMethodDecl
      */
     public static List<JCTree.JCExpression> getParameters(JCTree.JCMethodDecl jcMethodDecl) {
@@ -168,18 +185,84 @@ public class JCTreeUtil {
         return params;
     }
 
-    public static JCTree.JCExpression buildGetter(String key) {
-        String arr[] = key.split("\\.");
 
-        JCTree.JCExpression expression = env.getTreeMaker().Ident(env.getNames().fromString(arr[0]));
-        for (int i = 1; i < arr.length; i++) {
-            String methodName = "get" + arr[i].substring(0, 1).toUpperCase() + arr[i].substring(1);
-            JCTree.JCFieldAccess fieldAccess = env.getTreeMaker().Select(expression, env.getNames().fromString(methodName));
-            JCTree.JCMethodInvocation methodInvocation = env.getTreeMaker().Apply(List.nil(), fieldAccess, List.nil());
-            expression = methodInvocation;
+    /**
+     * @param element
+     * @param name
+     * @return
+     */
+    public static String getAnnotationParameter(Element element, String name) {
+        AnnotationMirror annotationMirror = JCTreeUtil.getAnnotationMirror(element, MethodCache.class.getName());
+
+        for (ExecutableElement ee : annotationMirror.getElementValues().keySet()) {
+            if (ee.getSimpleName().toString().equals(name)) {
+                return annotationMirror.getElementValues().get(ee).getValue().toString();
+            }
         }
 
-        return expression;
+        return null;
+    }
+
+    /**
+     * @param element
+     * @param name
+     * @param defaultValue
+     * @return
+     */
+    public static String getAnnotationParameter(Element element, String name, String defaultValue) {
+        AnnotationMirror annotationMirror = JCTreeUtil.getAnnotationMirror(element, MethodCache.class.getName());
+
+        for (ExecutableElement ee : annotationMirror.getElementValues().keySet()) {
+            if (ee.getSimpleName().toString().equals(name)) {
+                return annotationMirror.getElementValues().get(ee).getValue().toString();
+            }
+        }
+
+        return defaultValue;
+    }
+
+    /**
+     * create code like：Object _cacheValue = _memoryCacheHandle.set(key, _returnValue, expire, unit);
+     */
+    public static JCTree.JCVariableDecl callMethodWithReturn(String varType, String varName, String targetVarName, String methodName, List args) {
+        JCTree.JCIdent varIdent = env.getTreeMaker().Ident(env.getNames().fromString(varName));
+        JCTree.JCExpression typeExpr = env.getTreeMaker().Ident(env.getNames().fromString(varType));
+        JCTree.JCFieldAccess fieldAccess = env.getTreeMaker().Select(varIdent, env.getNames().fromString(methodName));
+
+        JCTree.JCMethodInvocation methodInvocation = env.getTreeMaker().Apply(List.nil(), fieldAccess, args);
+        return env.getTreeMaker().VarDef(env.getTreeMaker().Modifiers(0), env.getNames().fromString(targetVarName), typeExpr, methodInvocation);
+    }
+
+    /**
+     * get a null value variable
+     *
+     * @return
+     */
+    public static JCTree.JCLiteral getNull() {
+        return env.getTreeMaker().Literal(TypeTag.BOT, null);
+    }
+
+    /**
+     * var != null
+     *
+     * @return
+     */
+    public static JCTree.JCExpression neNull(String varName) {
+        return env.getTreeMaker().Binary(JCTree.Tag.NE, env.getTreeMaker().Ident(env.getNames().fromString(varName)), env.getTreeMaker().Literal(TypeTag.BOT, null));
+    }
+
+    /**
+     * create code like：_memoryCacheHandle.set(key, _returnValue, expire, unit);
+     *
+     * @param targetVarName
+     * @param methodName
+     * @param args
+     * @return
+     */
+    public static JCTree.JCExpressionStatement callMethod(String targetVarName, String methodName, List args) {
+        JCTree.JCFieldAccess fieldAccess = env.getTreeMaker().Select(env.getTreeMaker().Ident(env.getNames().fromString(targetVarName)), env.getNames().fromString(methodName));
+        JCTree.JCMethodInvocation methodInvocation = env.getTreeMaker().Apply(List.nil(), fieldAccess, args);
+        return env.getTreeMaker().Exec(methodInvocation);
     }
 
 }
