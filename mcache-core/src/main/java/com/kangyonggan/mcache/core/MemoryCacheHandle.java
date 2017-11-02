@@ -25,19 +25,6 @@ public class MemoryCacheHandle implements MethodCacheHandle {
      */
     @Override
     public void set(String prefix, String key, Object value, Long expire, MethodCache.Unit unit) {
-        if (prefix == null) {
-            prefix = MethodCacheConfig.getPrefix();
-        }
-        if (prefix != null && !prefix.equals("")) {
-            key = prefix + ":" + key;
-        }
-        if (expire == null) {
-            expire = MethodCacheConfig.getExpire();
-        }
-        if (unit == null) {
-            unit = MethodCacheConfig.getUnit();
-        }
-
         caches.put(key, new CacheItem(value, expire, unit));
     }
 
@@ -50,13 +37,6 @@ public class MemoryCacheHandle implements MethodCacheHandle {
      */
     @Override
     public Object get(String prefix, String key) {
-        if (prefix == null) {
-            prefix = MethodCacheConfig.getPrefix();
-        }
-        if (prefix != null && !prefix.equals("")) {
-            key = prefix + ":" + key;
-        }
-
         CacheItem cacheItem = caches.get(key);
         if (cacheItem == null) {
             return null;
