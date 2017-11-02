@@ -13,6 +13,7 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
+import javax.print.attribute.HashAttributeSet;
 import java.util.Set;
 
 /**
@@ -77,8 +78,27 @@ public class MethodCacheProcessor extends AbstractProcessor {
         JCTree tree = (JCTree) trees.getTree(parentElement);
 
         tree.accept(new TreeTranslator() {
+            private boolean hasAnnotation;
+
+            @Override
+            public void visitMethodDef(JCTree.JCMethodDecl jcMethodDecl) {
+                super.visitMethodDef(jcMethodDecl);
+                hasAnnotation = false;
+            }
+
+            @Override
+            public void visitAnnotation(JCTree.JCAnnotation jcAnnotation) {
+                super.visitAnnotation(jcAnnotation);
+                hasAnnotation = true;
+            }
+
             @Override
             public void visitReturn(JCTree.JCReturn jcReturn) {
+                if (!hasAnnotation) {
+                    super.visitReturn(jcReturn);
+                    return;
+                }
+
                 /**
                  * create code: MethodReturnHandle.processReturn(args);
                  */

@@ -9,6 +9,22 @@ import com.kangyonggan.mcache.core.MethodCacheConfig;
  */
 public class UserService {
 
+    public static User func1(User user) {
+        User u1 = new User();
+        u1.setId(1L);
+
+        return u1;
+    }
+
+    @MethodCache(value = "user:${user.info.realname}")
+    public static User func2(User user) {
+        if (user != null) {
+            return user;
+        }
+
+        return new User();
+    }
+
     @MethodCache(value = "user:${user.info.realname}")
     public static User findUserByRealname(User user) {
         System.out.println("没走缓存：" + user);
@@ -17,6 +33,13 @@ public class UserService {
         }
 
         return new User();
+    }
+
+    public static User findUserByRealname2(User user) {
+        User u = new User();
+        u.setId(1L);
+
+        return u;
     }
 
     public static void main(String[] args) throws Exception {
