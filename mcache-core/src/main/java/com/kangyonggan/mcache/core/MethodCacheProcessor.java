@@ -1,6 +1,6 @@
 package com.kangyonggan.mcache.core;
 
-import com.kangyonggan.mcache.core.express.JCExpressionParse;
+import com.kangyonggan.mcache.core.express.JCExpressionParser;
 import com.sun.source.util.Trees;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeMaker;
@@ -26,6 +26,7 @@ import java.util.Set;
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class MethodCacheProcessor extends AbstractProcessor {
 
+    private JCExpressionParser parser;
     private Trees trees;
     private TreeMaker treeMaker;
     private Name.Table names;
@@ -40,6 +41,7 @@ public class MethodCacheProcessor extends AbstractProcessor {
         trees = me.getTrees();
         treeMaker = me.getTreeMaker();
         names = me.getNames();
+        parser = new JCExpressionParser(treeMaker, names);
     }
 
     /**
@@ -80,8 +82,6 @@ public class MethodCacheProcessor extends AbstractProcessor {
         tree.accept(new TreeTranslator() {
             private boolean hasAnnotation;
 
-            private JCExpressionParse expressionParse = new JCExpressionParse();
-
             @Override
             public void visitMethodDef(JCTree.JCMethodDecl jcMethodDecl) {
                 super.visitMethodDef(jcMethodDecl);
@@ -92,15 +92,6 @@ public class MethodCacheProcessor extends AbstractProcessor {
             public void visitAnnotation(JCTree.JCAnnotation jcAnnotation) {
                 super.visitAnnotation(jcAnnotation);
                 hasAnnotation = true;
-
-                System.out.println("简单字符串");
-                expressionParse.parse("简单字符串");
-
-                System.out.println("${name}");
-                expressionParse.parse("${name}");
-
-                System.out.println("user:${user.info.realname}");
-                expressionParse.parse("user:${user.info.realname}");
             }
 
             @Override
@@ -114,7 +105,7 @@ public class MethodCacheProcessor extends AbstractProcessor {
                  * create code: MethodReturnHandle.processReturn(args);
                  */
                 String key = JCTreeUtil.getAnnotationParameter(element, "value");
-                JCTree.JCExpression keyExpression = getKeyExpression(key);
+                JCTree.JCExpression keyExpression = parser.parse(key);
                 String prefix = JCTreeUtil.getAnnotationParameter(element, "prefix");
                 JCTree.JCExpression prefixExpr = JCTreeUtil.getNull();
                 if (StringUtil.isNotEmpty(prefix)) {
@@ -157,7 +148,7 @@ public class MethodCacheProcessor extends AbstractProcessor {
                  * create code: Object _cacheValue = MethodReturnHandle.get(handlePackageName, prefix, key);
                  */
                 String key = JCTreeUtil.getAnnotationParameter(element, "value");
-                JCTree.JCExpression keyExpression = getKeyExpression(key);
+                JCTree.JCExpression keyExpression = parser.parse(key);
                 String prefix = JCTreeUtil.getAnnotationParameter(element, "prefix");
                 JCTree.JCExpression prefixExpr = JCTreeUtil.getNull();
                 if (StringUtil.isNotEmpty(prefix)) {
@@ -180,53 +171,5 @@ public class MethodCacheProcessor extends AbstractProcessor {
                 result = treeMaker.Block(0, statements.toList());
             }
         });
-    }
-
-    /**
-     * @param key
-     * @return
-     */
-    private JCTree.JCExpression getKeyExpression(String key) {
-        String keys[] = key.split(MethodCacheConstants.CACHE_KEY_SPLIT);
-        JCTree.JCExpression keyExpression = treeMaker.Literal(StringUtil.EMPTY);
-        String split = StringUtil.EMPTY;
-
-        for (String k : keys) {
-            if (k.startsWith("$")) {
-                k = k.replace("${", StringUtil.EMPTY).replace("}", StringUtil.EMPTY);
-                if (k.contains(".")) {
-                    keyExpression = treeMaker.Binary(JCTree.Tag.PLUS, keyExpression, treeMaker.Literal(split));
-                    keyExpression = treeMaker.Binary(JCTree.Tag.PLUS, keyExpression, buildGetter(k));
-                } else {
-                    keyExpression = treeMaker.Binary(JCTree.Tag.PLUS, keyExpression, treeMaker.Literal(split));
-                    keyExpression = treeMaker.Binary(JCTree.Tag.PLUS, keyExpression, treeMaker.Ident(names.fromString(k)));
-                }
-            } else {
-                keyExpression = treeMaker.Binary(JCTree.Tag.PLUS, keyExpression, treeMaker.Literal(split + k));
-            }
-
-            split = MethodCacheConstants.CACHE_KEY_SPLIT;
-        }
-
-        return keyExpression;
-    }
-
-    /**
-     * build key's getter
-     *
-     * @param key
-     * @return
-     */
-    private JCTree.JCExpression buildGetter(String key) {
-        String arr[] = key.split("\\.");
-
-        JCTree.JCExpression expression = treeMaker.Ident(names.fromString(arr[0]));
-        for (int i = 1; i < arr.length; i++) {
-            String methodName = "get" + StringUtil.toClassName(arr[i]);
-            JCTree.JCFieldAccess fieldAccess = treeMaker.Select(expression, names.fromString(methodName));
-            expression = treeMaker.Apply(List.nil(), fieldAccess, List.nil());
-        }
-
-        return expression;
     }
 }

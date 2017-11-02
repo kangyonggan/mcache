@@ -6,20 +6,27 @@ package com.kangyonggan.mcache.core.express;
  */
 public class JCExpressionLiteral extends JCExpressionElement {
 
-    private Object object;
+    private String constants;
 
-    public Object getObject() {
-        return object;
+    public String getConstants() {
+        return constants;
     }
 
-    public void setObject(Object object) {
-        this.object = object;
+    public void setConstants(String constants) {
+        this.constants = constants;
+    }
+
+    public JCExpressionLiteral() {
+    }
+
+    public JCExpressionLiteral(String constants) {
+        this.constants = constants;
     }
 
     @Override
     public String toString() {
         return "JCExpressionLiteral{" +
-                "object=" + object +
+                "constants='" + constants + '\'' +
                 '}';
     }
 }

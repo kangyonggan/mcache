@@ -28,4 +28,14 @@ public class StringUtil {
         return packageName.substring(packageName.lastIndexOf(".") + 1);
     }
 
+    public static boolean in(String data, String... arr) {
+        for (String str : arr) {
+            if (str.equals(data)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 }

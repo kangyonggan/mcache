@@ -16,6 +16,13 @@ public class JCExpressionIdent extends JCExpressionElement {
         this.variableName = variableName;
     }
 
+    public JCExpressionIdent() {
+    }
+
+    public JCExpressionIdent(String variableName) {
+        this.variableName = variableName;
+    }
+
     @Override
     public String toString() {
         return "JCExpressionIdent{" +
