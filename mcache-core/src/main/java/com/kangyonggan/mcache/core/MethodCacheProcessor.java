@@ -1,5 +1,6 @@
 package com.kangyonggan.mcache.core;
 
+import com.kangyonggan.mcache.core.express.JCExpressionParse;
 import com.sun.source.util.Trees;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeMaker;
@@ -13,7 +14,6 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
-import javax.print.attribute.HashAttributeSet;
 import java.util.Set;
 
 /**
@@ -80,6 +80,8 @@ public class MethodCacheProcessor extends AbstractProcessor {
         tree.accept(new TreeTranslator() {
             private boolean hasAnnotation;
 
+            private JCExpressionParse expressionParse = new JCExpressionParse();
+
             @Override
             public void visitMethodDef(JCTree.JCMethodDecl jcMethodDecl) {
                 super.visitMethodDef(jcMethodDecl);
@@ -90,6 +92,15 @@ public class MethodCacheProcessor extends AbstractProcessor {
             public void visitAnnotation(JCTree.JCAnnotation jcAnnotation) {
                 super.visitAnnotation(jcAnnotation);
                 hasAnnotation = true;
+
+                System.out.println("简单字符串");
+                expressionParse.parse("简单字符串");
+
+                System.out.println("${name}");
+                expressionParse.parse("${name}");
+
+                System.out.println("user:${user.info.realname}");
+                expressionParse.parse("user:${user.info.realname}");
             }
 
             @Override
