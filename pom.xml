@@ -7,7 +7,7 @@
     <groupId>com.kangyonggan</groupId>
     <artifactId>mcache</artifactId>
     <packaging>pom</packaging>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
 
     <name>Method Cache</name>
     <description>Use compile annotation manage method's cache</description>
@@ -38,7 +38,7 @@
 
     <properties>
         <!--Project-->
-        <project.build.version>1.0-SNAPSHOT</project.build.version>
+        <project.build.version>1.0</project.build.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!--Plugins-->
