@@ -1,7 +1,7 @@
 package com.kangyonggan.mcache.core;
 
-import com.kangyonggan.mcache.core.express.JCExpressionParser;
 import com.sun.source.util.Trees;
+import com.kangyonggan.jcel.JCExpressionParser;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.tree.TreeTranslator;
@@ -136,7 +136,6 @@ public class MethodCacheProcessor extends AbstractProcessor {
      * @param className
      */
     private void generateBlockCode(Element element, String handlePackageName, String className) {
-        String varName = MethodCacheConstants.VARIABLE_PREFIX + StringUtil.toVarName(className);
         JCTree tree = (JCTree) trees.getTree(element);
 
         tree.accept(new TreeTranslator() {
