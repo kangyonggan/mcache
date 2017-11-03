@@ -21,11 +21,6 @@ public class CacheItem {
     private Long expire;
 
     /**
-     * Cache expire time's unit
-     */
-    private MethodCache.Unit unit;
-
-    /**
      * Cache update time
      */
     private Date updateDate;
@@ -33,10 +28,9 @@ public class CacheItem {
     public CacheItem() {
     }
 
-    public CacheItem(Object value, Long expire, MethodCache.Unit unit) {
+    public CacheItem(Object value, Long expire) {
         this.value = value;
         this.expire = expire;
-        this.unit = unit;
         this.updateDate = new Date();
     }
 
@@ -56,14 +50,6 @@ public class CacheItem {
         this.expire = expire;
     }
 
-    public MethodCache.Unit getUnit() {
-        return unit;
-    }
-
-    public void setUnit(MethodCache.Unit unit) {
-        this.unit = unit;
-    }
-
     public Date getUpdateDate() {
         return updateDate;
     }
@@ -77,7 +63,6 @@ public class CacheItem {
         return "CacheItem{" +
                 "value=" + value +
                 ", expire=" + expire +
-                ", unit=" + unit +
                 ", updateDate=" + updateDate +
                 '}';
     }
@@ -90,7 +75,7 @@ public class CacheItem {
             return false;
         }
 
-        if (new Date().getTime() < updateDate.getTime() + expire * unit.getWeight() * 1000) {
+        if (new Date().getTime() < updateDate.getTime() + expire * 1000) {
             return false;
         }
 

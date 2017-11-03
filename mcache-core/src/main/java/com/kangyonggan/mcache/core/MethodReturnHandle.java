@@ -39,8 +39,8 @@ public class MethodReturnHandle {
 
         try {
             Class clazz = Class.forName(handlePackage);
-            Method method = clazz.getDeclaredMethod("set", String.class, Object.class, Long.class, MethodCache.Unit.class);
-            method.invoke(getInstance(clazz), key, value, expire, unit);
+            Method method = clazz.getDeclaredMethod("set", String.class, Object.class, Long.class);
+            method.invoke(getInstance(clazz), key, value, expire * unit.getWeight());
         } catch (Exception e) {
             e.printStackTrace();
         }

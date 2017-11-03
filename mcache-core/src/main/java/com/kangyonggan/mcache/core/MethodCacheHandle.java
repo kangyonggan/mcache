@@ -6,7 +6,7 @@ package com.kangyonggan.mcache.core;
  */
 public interface MethodCacheHandle {
 
-    void set(String key, Object value, Long expire, MethodCache.Unit unit);
+    void set(String key, Object value, Long expire);
 
     Object get(String key);
 

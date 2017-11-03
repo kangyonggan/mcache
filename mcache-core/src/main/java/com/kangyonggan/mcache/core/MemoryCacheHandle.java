@@ -20,11 +20,10 @@ public class MemoryCacheHandle implements MethodCacheHandle {
      * @param key
      * @param value
      * @param expire
-     * @param unit
      */
     @Override
-    public void set(String key, Object value, Long expire, MethodCache.Unit unit) {
-        caches.put(key, new CacheItem(value, expire, unit));
+    public void set(String key, Object value, Long expire) {
+        caches.put(key, new CacheItem(value, expire));
     }
 
     /**

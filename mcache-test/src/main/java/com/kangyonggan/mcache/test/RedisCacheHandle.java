@@ -1,6 +1,5 @@
 package com.kangyonggan.mcache.test;
 
-import com.kangyonggan.mcache.core.MethodCache;
 import com.kangyonggan.mcache.core.MethodCacheHandle;
 
 /**
@@ -10,7 +9,7 @@ import com.kangyonggan.mcache.core.MethodCacheHandle;
 public class RedisCacheHandle implements MethodCacheHandle {
 
     @Override
-    public void set(String key, Object value, Long expire, MethodCache.Unit unit) {
+    public void set(String key, Object value, Long expire) {
         System.out.println("redis:save cache: key:" + key + ", value:" + value);
     }
 
