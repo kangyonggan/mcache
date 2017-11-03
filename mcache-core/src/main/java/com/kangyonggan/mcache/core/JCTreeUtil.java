@@ -114,13 +114,26 @@ public class JCTreeUtil {
      * @return
      */
     public static JCTree.JCExpression getReturnType(Element element) {
+        return getReturnType(element, element.toString());
+    }
+
+    /**
+     * get the method's return type
+     *
+     * @param element
+     * @param methodDef
+     * @return
+     */
+    public static JCTree.JCExpression getReturnType(Element element, String methodDef) {
         final JCTree.JCExpression[] returnType = new JCTree.JCExpression[1];
 
         JCTree tree = (JCTree) env.getTrees().getTree(element);
         tree.accept(new TreeTranslator() {
             @Override
             public void visitMethodDef(JCTree.JCMethodDecl jcMethodDecl) {
-                returnType[0] = jcMethodDecl.restype;
+                if (methodDef.equals(jcMethodDecl.sym.toString())) {
+                    returnType[0] = jcMethodDecl.restype;
+                }
                 super.visitMethodDef(jcMethodDecl);
             }
         });
@@ -188,11 +201,12 @@ public class JCTreeUtil {
 
     /**
      * @param element
+     * @param annoClass
      * @param name
      * @return
      */
-    public static String getAnnotationParameter(Element element, String name) {
-        AnnotationMirror annotationMirror = JCTreeUtil.getAnnotationMirror(element, MethodCache.class.getName());
+    public static String getAnnotationParameter(Element element, Class annoClass, String name) {
+        AnnotationMirror annotationMirror = JCTreeUtil.getAnnotationMirror(element, annoClass.getName());
 
         for (ExecutableElement ee : annotationMirror.getElementValues().keySet()) {
             if (ee.getSimpleName().toString().equals(name)) {
@@ -205,12 +219,13 @@ public class JCTreeUtil {
 
     /**
      * @param element
+     * @param annoClass
      * @param name
      * @param defaultValue
      * @return
      */
-    public static String getAnnotationParameter(Element element, String name, String defaultValue) {
-        AnnotationMirror annotationMirror = JCTreeUtil.getAnnotationMirror(element, MethodCache.class.getName());
+    public static String getAnnotationParameter(Element element, Class annoClass, String name, String defaultValue) {
+        AnnotationMirror annotationMirror = JCTreeUtil.getAnnotationMirror(element, annoClass.getName());
 
         for (ExecutableElement ee : annotationMirror.getElementValues().keySet()) {
             if (ee.getSimpleName().toString().equals(name)) {

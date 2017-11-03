@@ -28,7 +28,7 @@ public class MethodReturnHandle {
             prefix = MethodCacheConfig.getPrefix();
         }
         if (prefix != null && !prefix.equals("")) {
-            key = prefix + ":" + key;
+            key = prefix + key;
         }
         if (expire == null) {
             expire = MethodCacheConfig.getExpire();
@@ -39,8 +39,36 @@ public class MethodReturnHandle {
 
         try {
             Class clazz = Class.forName(handlePackage);
-            Method method = clazz.getDeclaredMethod("set", String.class, String.class, Object.class, Long.class, MethodCache.Unit.class);
-            method.invoke(getInstance(clazz), prefix, key, value, expire, unit);
+            Method method = clazz.getDeclaredMethod("set", String.class, Object.class, Long.class, MethodCache.Unit.class);
+            method.invoke(getInstance(clazz), key, value, expire, unit);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return value;
+    }
+
+    /**
+     * process return value，delete from cache
+     *
+     * @param handlePackage
+     * @param prefix
+     * @param key
+     * @param value
+     * @return
+     */
+    public static Object processDelReturn(String handlePackage, String prefix, String key, Object value) {
+        if (prefix == null) {
+            prefix = MethodCacheConfig.getPrefix();
+        }
+        if (prefix != null && !prefix.equals("")) {
+            key = prefix + key;
+        }
+
+        try {
+            Class clazz = Class.forName(handlePackage);
+            Method method = clazz.getDeclaredMethod("delete", String.class);
+            method.invoke(getInstance(clazz), key);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -61,13 +89,13 @@ public class MethodReturnHandle {
             prefix = MethodCacheConfig.getPrefix();
         }
         if (prefix != null && !prefix.equals("")) {
-            key = prefix + ":" + key;
+            key = prefix + key;
         }
 
         try {
             Class clazz = Class.forName(handlePackage);
-            Method method = clazz.getDeclaredMethod("get", String.class, String.class);
-            return method.invoke(getInstance(clazz), prefix, key);
+            Method method = clazz.getDeclaredMethod("get", String.class);
+            return method.invoke(getInstance(clazz), key);
         } catch (Exception e) {
             e.printStackTrace();
         }

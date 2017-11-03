@@ -17,26 +17,24 @@ public class MemoryCacheHandle implements MethodCacheHandle {
     /**
      * set cache to memory
      *
-     * @param prefix
      * @param key
      * @param value
      * @param expire
      * @param unit
      */
     @Override
-    public void set(String prefix, String key, Object value, Long expire, MethodCache.Unit unit) {
+    public void set(String key, Object value, Long expire, MethodCache.Unit unit) {
         caches.put(key, new CacheItem(value, expire, unit));
     }
 
     /**
      * get cache from memory
      *
-     * @param prefix
      * @param key
      * @return
      */
     @Override
-    public Object get(String prefix, String key) {
+    public Object get(String key) {
         CacheItem cacheItem = caches.get(key);
         if (cacheItem == null) {
             return null;
@@ -51,6 +49,16 @@ public class MemoryCacheHandle implements MethodCacheHandle {
         cacheItem.setUpdateDate(new Date());
 
         return cacheItem.getValue();
+    }
+
+    /**
+     * delete cache from memory
+     *
+     * @param key
+     */
+    @Override
+    public void delete(String key) {
+        caches.remove(key);
     }
 
 }

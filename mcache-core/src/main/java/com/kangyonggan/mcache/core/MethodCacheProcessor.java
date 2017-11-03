@@ -1,7 +1,7 @@
 package com.kangyonggan.mcache.core;
 
-import com.sun.source.util.Trees;
 import com.kangyonggan.jcel.JCExpressionParser;
+import com.sun.source.util.Trees;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.tree.TreeTranslator;
@@ -22,7 +22,7 @@ import java.util.Set;
  * @author kangyonggan
  * @since 10/31/17
  */
-@SupportedAnnotationTypes("com.kangyonggan.mcache.core.MethodCache")
+@SupportedAnnotationTypes({"com.kangyonggan.mcache.core.MethodCache", "com.kangyonggan.mcache.core.MethodCacheDel"})
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class MethodCacheProcessor extends AbstractProcessor {
 
@@ -51,69 +51,165 @@ public class MethodCacheProcessor extends AbstractProcessor {
      */
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment env) {
-        for (Element element : env.getElementsAnnotatedWith(MethodCache.class)) {
-            if (element.getKind() == ElementKind.METHOD) {
-                if (JCTreeUtil.getReturnType(element) == null) {
-                    return true;
-                }
+        processMethodCache(env);
 
-                String handlePackageName = JCTreeUtil.getAnnotationParameter(element, "handle", MemoryCacheHandle.class.getName());
+        processMethodCacheDel(env);
+
+        return true;
+    }
+
+    /**
+     * process MethodCacheDel annotation
+     *
+     * @param env
+     */
+    private void processMethodCacheDel(RoundEnvironment env) {
+        for (Element element : env.getElementsAnnotatedWith(MethodCacheDel.class)) {
+            if (element.getKind() == ElementKind.METHOD) {
+                JCTree.JCExpression returnType = JCTreeUtil.getReturnType(element);
+
+                String handlePackageName = JCTreeUtil.getAnnotationParameter(element, MethodCacheDel.class, "handle", MemoryCacheHandle.class.getName());
                 JCTreeUtil.importPackage(element, handlePackageName);
                 JCTreeUtil.importPackage(element, MethodReturnHandle.class.getName());
 
                 String className = StringUtil.getClassName(handlePackageName);
                 JCTreeUtil.defineVariable(element, className, List.nil());
 
-                generateReturnCode(element, handlePackageName);
-                generateBlockCode(element, handlePackageName, className);
+                generateDelReturnCode(element, handlePackageName, returnType);
+                generateDelBlockCode(element, handlePackageName, returnType);
             }
         }
-        return true;
+    }
+
+    /**
+     * process MethodCache annotation
+     *
+     * @param env
+     */
+    private void processMethodCache(RoundEnvironment env) {
+        for (Element element : env.getElementsAnnotatedWith(MethodCache.class)) {
+            if (element.getKind() == ElementKind.METHOD) {
+                JCTree.JCExpression returnType = JCTreeUtil.getReturnType(element);
+                if (returnType == null || returnType.toString().equals(MethodCacheConstants.RETURN_VOID)) {
+                    return;
+                }
+
+                String handlePackageName = JCTreeUtil.getAnnotationParameter(element, MethodCache.class, "handle", MemoryCacheHandle.class.getName());
+                JCTreeUtil.importPackage(element, handlePackageName);
+                JCTreeUtil.importPackage(element, MethodReturnHandle.class.getName());
+
+                String className = StringUtil.getClassName(handlePackageName);
+                JCTreeUtil.defineVariable(element, className, List.nil());
+
+                generateReturnCode(element, handlePackageName, returnType);
+                generateBlockCode(element, handlePackageName, returnType);
+            }
+        }
     }
 
     /**
      * @param element
      * @param handlePackageName
+     * @param returnType
      */
-    private void generateReturnCode(Element element, String handlePackageName) {
+    private void generateDelReturnCode(Element element, String handlePackageName, JCTree.JCExpression returnType) {
         Element parentElement = element.getEnclosingElement();
         JCTree tree = (JCTree) trees.getTree(parentElement);
 
         tree.accept(new TreeTranslator() {
-            private boolean hasAnnotation;
+            private boolean isTargetMethod;
 
             @Override
             public void visitMethodDef(JCTree.JCMethodDecl jcMethodDecl) {
+                isTargetMethod = element.toString().equals(jcMethodDecl.sym.toString());
                 super.visitMethodDef(jcMethodDecl);
-                hasAnnotation = false;
             }
 
             @Override
             public void visitAnnotation(JCTree.JCAnnotation jcAnnotation) {
+                if (isTargetMethod) {
+                    isTargetMethod = MethodCacheDel.class.getSimpleName().equals(jcAnnotation.annotationType.toString());
+                }
                 super.visitAnnotation(jcAnnotation);
-                hasAnnotation = true;
             }
 
             @Override
             public void visitReturn(JCTree.JCReturn jcReturn) {
-                if (!hasAnnotation) {
+                if (!isTargetMethod) {
                     super.visitReturn(jcReturn);
                     return;
                 }
+                isTargetMethod = false;
 
                 /**
-                 * create code: MethodReturnHandle.processReturn(args);
+                 * create code: MethodReturnHandle.processDelReturn(args);
                  */
-                String key = JCTreeUtil.getAnnotationParameter(element, "value");
+                String key = JCTreeUtil.getAnnotationParameter(element, MethodCacheDel.class, "value");
                 JCTree.JCExpression keyExpression = parser.parse(key);
-                String prefix = JCTreeUtil.getAnnotationParameter(element, "prefix");
+                String prefix = JCTreeUtil.getAnnotationParameter(element, MethodCacheDel.class, "prefix");
                 JCTree.JCExpression prefixExpr = JCTreeUtil.getNull();
                 if (StringUtil.isNotEmpty(prefix)) {
                     prefixExpr = treeMaker.Ident(names.fromString(prefix));
                 }
-                String strExpire = JCTreeUtil.getAnnotationParameter(element, "expire");
+                List args = List.of(treeMaker.Literal(handlePackageName), prefixExpr, keyExpression, jcReturn.getExpression());
+
+                JCTree.JCFieldAccess fieldAccess = treeMaker.Select(treeMaker.Ident(names.fromString(MethodReturnHandle.class.getSimpleName())), names.fromString("processDelReturn"));
+                JCTree.JCMethodInvocation methodInvocation = treeMaker.Apply(List.nil(), fieldAccess, args);
+
+                JCTree.JCTypeCast jcTypeCast = treeMaker.TypeCast(returnType, methodInvocation);
+                jcReturn.expr = jcTypeCast;
+                this.result = jcReturn;
+            }
+        });
+    }
+
+    /**
+     * @param element
+     * @param handlePackageName
+     * @param returnType
+     */
+    private void generateReturnCode(Element element, String handlePackageName, JCTree.JCExpression returnType) {
+        Element parentElement = element.getEnclosingElement();
+        JCTree tree = (JCTree) trees.getTree(parentElement);
+
+        tree.accept(new TreeTranslator() {
+            private boolean isTargetMethod;
+
+            @Override
+            public void visitMethodDef(JCTree.JCMethodDecl jcMethodDecl) {
+                isTargetMethod = element.toString().equals(jcMethodDecl.sym.toString());
+                super.visitMethodDef(jcMethodDecl);
+            }
+
+            @Override
+            public void visitAnnotation(JCTree.JCAnnotation jcAnnotation) {
+                if (isTargetMethod) {
+                    isTargetMethod = MethodCache.class.getSimpleName().equals(jcAnnotation.annotationType.toString());
+                }
+                super.visitAnnotation(jcAnnotation);
+            }
+
+            @Override
+            public void visitReturn(JCTree.JCReturn jcReturn) {
+                if (!isTargetMethod) {
+                    super.visitReturn(jcReturn);
+                    return;
+                }
+                isTargetMethod = false;
+
+                /**
+                 * create code: MethodReturnHandle.processReturn(args);
+                 */
+                String key = JCTreeUtil.getAnnotationParameter(element, MethodCache.class, "value");
+                JCTree.JCExpression keyExpression = parser.parse(key);
+                String prefix = JCTreeUtil.getAnnotationParameter(element, MethodCache.class, "prefix");
+                JCTree.JCExpression prefixExpr = JCTreeUtil.getNull();
+                if (StringUtil.isNotEmpty(prefix)) {
+                    prefixExpr = treeMaker.Ident(names.fromString(prefix));
+                }
+                String strExpire = JCTreeUtil.getAnnotationParameter(element, MethodCache.class, "expire");
                 JCTree.JCLiteral expireLiteral = strExpire == null ? JCTreeUtil.getNull() : treeMaker.Literal(Long.parseLong(strExpire));
-                String unit = JCTreeUtil.getAnnotationParameter(element, "unit");
+                String unit = JCTreeUtil.getAnnotationParameter(element, MethodCache.class, "unit");
                 List args;
                 if (unit != null) {
                     JCTree.JCFieldAccess fa = treeMaker.Select(treeMaker.Select(treeMaker.Ident(names.fromString(MethodCache.class.getSimpleName())), names.fromString(MethodCache.Unit.class.getSimpleName())), names.fromString(unit));
@@ -124,7 +220,8 @@ public class MethodCacheProcessor extends AbstractProcessor {
 
                 JCTree.JCFieldAccess fieldAccess = treeMaker.Select(treeMaker.Ident(names.fromString(MethodReturnHandle.class.getSimpleName())), names.fromString("processReturn"));
                 JCTree.JCMethodInvocation methodInvocation = treeMaker.Apply(List.nil(), fieldAccess, args);
-                JCTree.JCTypeCast jcTypeCast = treeMaker.TypeCast(JCTreeUtil.getReturnType(element), methodInvocation);
+
+                JCTree.JCTypeCast jcTypeCast = treeMaker.TypeCast(returnType, methodInvocation);
                 jcReturn.expr = jcTypeCast;
                 this.result = jcReturn;
             }
@@ -133,9 +230,10 @@ public class MethodCacheProcessor extends AbstractProcessor {
 
     /**
      * @param element
-     * @param className
+     * @param handlePackageName
+     * @param returnType
      */
-    private void generateBlockCode(Element element, String handlePackageName, String className) {
+    private void generateBlockCode(Element element, String handlePackageName, JCTree.JCExpression returnType) {
         JCTree tree = (JCTree) trees.getTree(element);
 
         tree.accept(new TreeTranslator() {
@@ -146,9 +244,9 @@ public class MethodCacheProcessor extends AbstractProcessor {
                 /**
                  * create code: Object _cacheValue = MethodReturnHandle.get(handlePackageName, prefix, key);
                  */
-                String key = JCTreeUtil.getAnnotationParameter(element, "value");
+                String key = JCTreeUtil.getAnnotationParameter(element, MethodCache.class, "value");
                 JCTree.JCExpression keyExpression = parser.parse(key);
-                String prefix = JCTreeUtil.getAnnotationParameter(element, "prefix");
+                String prefix = JCTreeUtil.getAnnotationParameter(element, MethodCache.class, "prefix");
                 JCTree.JCExpression prefixExpr = JCTreeUtil.getNull();
                 if (StringUtil.isNotEmpty(prefix)) {
                     prefixExpr = treeMaker.Ident(names.fromString(prefix));
@@ -159,13 +257,53 @@ public class MethodCacheProcessor extends AbstractProcessor {
                  * create code：if (_cacheValue != null) {return (returnType)_cacheValue;}
                  */
                 JCTree.JCParens condition = treeMaker.Parens(JCTreeUtil.neNull(MethodCacheConstants.VARIABLE_CACHE_VALUE_NAME));
-                JCTree.JCStatement statementTrue = treeMaker.Return(treeMaker.TypeCast(JCTreeUtil.getReturnType(element), treeMaker.Ident(names.fromString(MethodCacheConstants.VARIABLE_CACHE_VALUE_NAME))));
+                JCTree.JCStatement statementTrue = treeMaker.Return(treeMaker.TypeCast(returnType, treeMaker.Ident(names.fromString(MethodCacheConstants.VARIABLE_CACHE_VALUE_NAME))));
                 JCTree.JCIf jcIf = treeMaker.If(condition, statementTrue, null);
                 statements.append(jcIf);
 
                 for (JCTree.JCStatement jcStatement : tree.getStatements()) {
                     statements.append(jcStatement);
                 }
+
+                result = treeMaker.Block(0, statements.toList());
+            }
+        });
+    }
+
+    /**
+     * @param element
+     * @param returnType
+     */
+    private void generateDelBlockCode(Element element, String handlePackageName, JCTree.JCExpression returnType) {
+        JCTree tree = (JCTree) trees.getTree(element);
+        if (!returnType.toString().equals(MethodCacheConstants.RETURN_VOID)) {
+            return;
+        }
+
+        tree.accept(new TreeTranslator() {
+            @Override
+            public void visitBlock(JCTree.JCBlock tree) {
+                ListBuffer<JCTree.JCStatement> statements = new ListBuffer();
+
+                for (JCTree.JCStatement jcStatement : tree.getStatements()) {
+                    statements.append(jcStatement);
+                }
+
+                /**
+                 * create code: MethodReturnHandle.processDelReturn(args);
+                 */
+                String key = JCTreeUtil.getAnnotationParameter(element, MethodCacheDel.class, "value");
+                JCTree.JCExpression keyExpression = parser.parse(key);
+                String prefix = JCTreeUtil.getAnnotationParameter(element, MethodCacheDel.class, "prefix");
+                JCTree.JCExpression prefixExpr = JCTreeUtil.getNull();
+                if (StringUtil.isNotEmpty(prefix)) {
+                    prefixExpr = treeMaker.Ident(names.fromString(prefix));
+                }
+                List args = List.of(treeMaker.Literal(handlePackageName), prefixExpr, keyExpression, JCTreeUtil.getNull());
+
+                JCTree.JCFieldAccess fieldAccess = treeMaker.Select(treeMaker.Ident(names.fromString(MethodReturnHandle.class.getSimpleName())), names.fromString("processDelReturn"));
+                JCTree.JCMethodInvocation methodInvocation = treeMaker.Apply(List.nil(), fieldAccess, args);
+                statements.append(treeMaker.Exec(methodInvocation));
 
                 result = treeMaker.Block(0, statements.toList());
             }

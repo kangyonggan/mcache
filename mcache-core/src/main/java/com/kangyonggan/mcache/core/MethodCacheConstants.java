@@ -17,13 +17,8 @@ public interface MethodCacheConstants {
     String VARIABLE_CACHE_VALUE_NAME = VARIABLE_PREFIX + "cacheValue";
 
     /**
-     * return value variable name
+     * return void
      */
-    String VARIABLE_RETURN_VALUE_NAME = VARIABLE_PREFIX + "returnValue";
-
-    /**
-     * cache key's split char
-     */
-    String CACHE_KEY_SPLIT = ":";
+    String RETURN_VOID= "void";
 
 }
