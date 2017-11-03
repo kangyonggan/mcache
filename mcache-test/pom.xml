@@ -34,6 +34,10 @@
             <groupId>com.kangyonggan</groupId>
             <artifactId>mcache-core</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.kangyonggan</groupId>
+            <artifactId>method-logger</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

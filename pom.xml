@@ -55,6 +55,11 @@
             </dependency>
             <dependency>
                 <groupId>com.kangyonggan</groupId>
+                <artifactId>method-logger</artifactId>
+                <version>1.6</version>
+            </dependency>
+            <dependency>
+                <groupId>com.kangyonggan</groupId>
                 <artifactId>jcel</artifactId>
                 <version>${jcel.version}</version>
             </dependency>

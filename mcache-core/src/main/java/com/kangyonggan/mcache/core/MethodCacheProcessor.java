@@ -184,7 +184,10 @@ public class MethodCacheProcessor extends AbstractProcessor {
             @Override
             public void visitAnnotation(JCTree.JCAnnotation jcAnnotation) {
                 if (isTargetMethod) {
-                    isTargetMethod = MethodCache.class.getSimpleName().equals(jcAnnotation.annotationType.toString());
+                    boolean isTargetAnno = MethodCache.class.getSimpleName().equals(jcAnnotation.annotationType.toString());
+                    if (isTargetAnno) {
+                        isTargetMethod = true;
+                    }
                 }
                 super.visitAnnotation(jcAnnotation);
             }
@@ -195,7 +198,6 @@ public class MethodCacheProcessor extends AbstractProcessor {
                     super.visitReturn(jcReturn);
                     return;
                 }
-                isTargetMethod = false;
 
                 /**
                  * create code: MethodReturnHandle.processReturn(args);
